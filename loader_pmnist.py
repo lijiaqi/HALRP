@@ -1,0 +1,206 @@
+import os
+import sys
+import numpy as np
+import torch
+from torchvision import datasets, transforms
+from sklearn.utils import shuffle
+from torch.utils.data import Dataset
+
+########################################################################################################################
+mnist_dir = "./data/"
+pmnist_dir = "./data/binary_pmnist_32_3"
+
+
+def get_loader(
+    seed=0,
+    loader_type="train",
+    fixed_order=False,
+    pc_valid=0.1,
+    batch_size=32,
+    num_workers=4,
+    pin_memory=False,
+):
+    # def get(seed=0, fixed_order=False, pc_valid=0.1):
+    data = {}
+    taskcla = []
+    size = [3, 32, 32]
+
+    nperm = 10  # 10 tasks
+    # print('!@!!!',seed)
+    seeds = np.array(list(range(nperm)), dtype=int)
+    if not fixed_order:
+        seeds = shuffle(seeds, random_state=seed)
+
+    if not os.path.isdir(pmnist_dir):
+        os.makedirs(pmnist_dir)
+        # Pre-load
+        # MNIST
+        mean = (0.1307,)
+        std = (0.3081,)
+        dat = {}
+        dat["train"] = datasets.MNIST(
+            mnist_dir,
+            train=True,
+            download=True,
+            transform=transforms.Compose(
+                [
+                    transforms.Resize(size[1]),
+                    transforms.ToTensor(),
+                    transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
+                    transforms.Normalize(mean, std),
+                ]
+            ),
+        )
+        dat["test"] = datasets.MNIST(
+            mnist_dir,
+            train=False,
+            download=True,
+            transform=transforms.Compose(
+                [
+                    transforms.Resize(size[1]),
+                    transforms.ToTensor(),
+                    transforms.Lambda(lambda x: torch.cat([x, x, x], 0)),
+                    transforms.Normalize(mean, std),
+                ]
+            ),
+        )
+        for i, r in enumerate(seeds):
+            print(i, end=",")
+            sys.stdout.flush()
+            data[i] = {}
+            data[i]["name"] = "pmnist-{:d}".format(i)
+            data[i]["ncla"] = 10
+            for s in ["train", "test"]:
+                loader = torch.utils.data.DataLoader(dat[s], batch_size=1, shuffle=False)
+                data[i][s] = {"x": [], "y": []}
+                for image, target in loader:
+                    aux = image.view(-1).numpy()
+                    aux = shuffle(aux, random_state=r * 100 + i)
+                    image = torch.FloatTensor(aux).view(size)
+                    data[i][s]["x"].append(image)
+                    data[i][s]["y"].append(target.numpy()[0])
+
+            # "Unify" and save
+            for s in ["train", "test"]:
+                data[i][s]["x"] = torch.stack(data[i][s]["x"]).view(
+                    -1, size[0], size[1], size[2]
+                )
+                data[i][s]["y"] = torch.LongTensor(
+                    np.array(data[i][s]["y"], dtype=int)
+                ).view(-1)
+                torch.save(
+                    data[i][s]["x"],
+                    os.path.join(
+                        os.path.expanduser(pmnist_dir), "data" + str(r) + s + "x.bin"
+                    ),
+                )
+                torch.save(
+                    data[i][s]["y"],
+                    os.path.join(
+                        os.path.expanduser(pmnist_dir), "data" + str(r) + s + "y.bin"
+                    ),
+                )
+        print()
+
+    else:
+
+        # Load binary files
+        for i, r in enumerate(seeds):
+            data[i] = dict.fromkeys(["name", "ncla", "train", "test"])
+            data[i]["ncla"] = 10
+            data[i]["name"] = "pmnist-{:d}".format(i)
+
+            # Load
+            for s in ["train", "test"]:
+                data[i][s] = {"x": [], "y": []}
+                data[i][s]["x"] = torch.load(
+                    os.path.join(
+                        os.path.expanduser(pmnist_dir), "data" + str(r) + s + "x.bin"
+                    )
+                )
+                data[i][s]["y"] = torch.load(
+                    os.path.join(
+                        os.path.expanduser(pmnist_dir), "data" + str(r) + s + "y.bin"
+                    )
+                )
+
+    # Validation
+
+    train_loader_splits = {}
+    valid_loader_splits = {}
+    test_loader_splits = {}
+    task_output_space = {}
+
+    train_datasets = {}
+    val_datasets = {}
+    test_datasets = {}
+
+    for t in data.keys():
+        r = np.arange(data[t]["train"]["x"].size(0))
+        # r=np.array(shuffle(r,random_state=seed),dtype=int)
+        r = np.array(r, dtype=int)
+        nvalid = int(pc_valid * len(r))
+        ivalid = torch.LongTensor(r[:nvalid])
+        itrain = torch.LongTensor(r[nvalid:])
+        data[t]["valid"] = {}
+        data[t]["valid"]["x"] = data[t]["train"]["x"][ivalid].clone()
+        data[t]["valid"]["y"] = data[t]["train"]["y"][ivalid].clone()
+        data[t]["train"]["x"] = data[t]["train"]["x"][itrain].clone()
+        data[t]["train"]["y"] = data[t]["train"]["y"][itrain].clone()
+        task_output_space[t] = len(np.unique(data[t]["train"]["y"]))
+
+    for t in data.keys():
+        train_datasets[t] = single_handler(
+            X=data[t]["train"]["x"], Y=data[t]["train"]["y"]
+        )
+        val_datasets[t] = single_handler(X=data[t]["valid"]["x"], Y=data[t]["valid"]["y"])
+        test_datasets[t] = single_handler(X=data[t]["test"]["x"], Y=data[t]["test"]["y"])
+
+    for t in data.keys():
+        train_loader_splits[t] = torch.utils.data.DataLoader(
+            train_datasets[t],
+            batch_size=batch_size,
+            shuffle=True,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            drop_last=True,
+        )
+
+        valid_loader_splits[t] = torch.utils.data.DataLoader(
+            val_datasets[t],
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
+
+        test_loader_splits[t] = torch.utils.data.DataLoader(
+            test_datasets[t],
+            batch_size=batch_size,
+            shuffle=False,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+        )
+
+    n = 0
+
+    if loader_type == "train":
+        return (train_loader_splits, valid_loader_splits, task_output_space)
+
+    elif loader_type == "test":
+        return test_loader_splits
+
+
+class single_handler(Dataset):
+
+    def __init__(self, X, Y):
+        self.X = X
+        self.Y = Y
+
+    def __getitem__(self, index):
+
+        x, y = self.X[index], self.Y[index]
+        return x, y
+
+    def __len__(self):
+        return len(self.Y)
