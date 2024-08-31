@@ -1,9 +1,15 @@
-## Official code: *Hessian Aware Low-Rank Perturbation for Order-Robust Continual Learning* (IEEE TKDE)
+## Official code for *Hessian Aware Low-Rank Perturbation for Order-Robust Continual Learning* (HALRP, accepted by IEEE TKDE)
 
 [[paper](https://ieeexplore.ieee.org/document/10572323)][[arxiv](https://arxiv.org/abs/2311.15161)]
 
 
 ### Experiments
+
+- Prepare datasets:
+```shell
+bash scripts-prepare/download_tinyimgnet.sh
+bash scripts-prepare/download_others.sh
+```
 
 - Run HALRP on ```5-dataset``` with AlexNet/ResNet18:
 ```shell
@@ -50,3 +56,5 @@ If you find it useful for your study, please consider to cite:
   doi={10.1109/TKDE.2024.3419449}
 }
 ```
+### Acknowledgement
+This work was doen with [Dr. Fan Zhou](https://fzhou.cc/)(@Beihang University) and [Prof. Christian Gagné](https://chgagne.github.io/english/)(@Université Laval).
