@@ -170,18 +170,6 @@ parser.add_argument(
 ######################################
 parser.add_argument("--sparsity", type=float, default=0.1, help="sparsity 'c' in WSN")
 ######################################
-# Only for BMKP baseline
-######################################
-parser.add_argument(
-    "--bmkp_lambda",
-    type=float,
-    default=10,
-    help="lambda '\lambda' in BMKP to balance ce_loss and reg_loss",
-)
-parser.add_argument(
-    "--retrain_epochs", type=int, default=5, help="Number of epochs for retrain"
-)
-######################################
 # Only for PRD baseline
 ######################################
 parser.add_argument(
@@ -378,8 +366,6 @@ with Tee(os.path.join(args.log_dir, file_prefix + ".log")):
                     "model": args.model,
                     "sparsity": args.sparsity,
                     "img_sz": 32,
-                    "bmkp_lambda": args.bmkp_lambda,  # for BMKP baseline
-                    "retrain_epochs": args.retrain_epochs,  # for BMKP baseline
                     "supcon_temperature": args.supcon_temperature,  # for PRD baseline
                     "hidden_dim": args.hidden_dim,  # for PRD baseline
                     "feat_dim": args.feat_dim,  # for PRD baseline

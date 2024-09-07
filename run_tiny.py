@@ -182,18 +182,6 @@ parser.add_argument(
 parser.add_argument("--pin_memory", type=bool, default=True)
 
 parser.add_argument("--sparsity", type=float, default=0.1, help="sparsity 'c' in WSN")
-parser.add_argument(
-    "--bmkp_lambda",
-    type=float,
-    default=10,
-    help="lambda '\lambda' in BMKP to balance ce_loss and reg_loss",
-)
-parser.add_argument("--retrain_epochs", type=int, default=10, help="Number of epochs for retrain")
-######################################
-# Only for GPM baseline
-######################################
-parser.add_argument("--thres_base", type=float, default=0.92, help="thres_base")
-parser.add_argument("--thres_inc", type=float, default=0.0008, help="thres_increment")
 ######################################
 # to define number of tasks for TinyImageNet
 ######################################
@@ -286,8 +274,6 @@ with Tee(os.path.join(args.log_dir, file_prefix + ".log")):
         args.valid_size,
         "\nEpoch:",
         args.n_epochs,
-        "\nRetrain_epoch:",
-        args.retrain_epochs,
         "\nBatchSize:",
         args.batch_size,
         "\nlr:",
@@ -376,10 +362,6 @@ with Tee(os.path.join(args.log_dir, file_prefix + ".log")):
                     "model": args.model,
                     "sparsity": args.sparsity,  # for WSN
                     "img_sz": 64,  # 64 for tinyImageNet
-                    "bmkp_lambda": args.bmkp_lambda,  # for BMKP baseline
-                    "retrain_epochs": args.retrain_epochs,  # for BMKP baseline
-                    "thres_base": args.thres_base,  # for GPM baseline
-                    "thres_inc": args.thres_inc,  # for GPM baseline
                     'supcon_temperature': args.supcon_temperature, # for PRD baseline
                     'hidden_dim': args.hidden_dim, # for PRD baseline
                     'feat_dim': args.feat_dim, # for PRD baseline

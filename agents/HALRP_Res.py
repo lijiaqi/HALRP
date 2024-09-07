@@ -381,7 +381,7 @@ class HALRP_Res(nn.Module):
             loss.backward()
 
             for i, p in importance.items():
-                p += torch.mean(self.param_track[str(i)].grad**2) * len(inputs) / len(dataloader)
+                p += torch.mean(self.model.features[i].weight.grad**2) * len(inputs) / len(dataloader)
 
         self.train(mode=mode)
         self.importance_alltask[self.trained_task] = importance
