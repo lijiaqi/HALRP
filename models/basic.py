@@ -39,13 +39,25 @@ class changeHead(nn.Module):
 
 
 class rankPerturb4_Conv2d(nn.Module):
+
     def __init__(
-        self, layerW, layerB, mask_S, mask_R, param_S, param_R, kernel_size, padding
+        self,
+        layerW,
+        layerB,
+        mask_S,
+        mask_R,
+        param_S,
+        param_R,
+        kernel_size,
+        padding,
+        stride=1,
     ):
         super(rankPerturb4_Conv2d, self).__init__()
         self.layerW = layerW
         self.layerB = layerB
         self.padding = padding
+        self.stride = stride
+
         self.in_channels = layerW.shape[1]
         self.out_channels = layerW.shape[0]
         self.mask_S = mask_S.view(1, self.in_channels, 1, 1)
@@ -56,13 +68,17 @@ class rankPerturb4_Conv2d(nn.Module):
 
     def forward(self, x):
         x1 = x * gen_mask(self.mask_S)
-        x1 = F.conv2d(x1, weight=self.layerW, padding=self.padding) * gen_mask(
+        x1 = F.conv2d(
+            x1, weight=self.layerW, padding=self.padding, stride=self.stride
+        ) * gen_mask(
             self.mask_R
         )  # channelwise filter
         x1 = x1 + self.layerB.view(1, self.out_channels, 1, 1)
         x2 = F.conv2d(x, weight=self.kernel1)
         x2 = (
-            F.avg_pool2d(x2, kernel_size=self.kernel_size, stride=1, padding=self.padding)
+            F.avg_pool2d(
+                x2, kernel_size=self.kernel_size, stride=self.stride, padding=self.padding
+            )
             * self.kernel_size[0]
             * self.kernel_size[1]
         )

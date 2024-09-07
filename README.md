@@ -57,4 +57,4 @@ If you find it useful for your study, please consider to cite:
 }
 ```
 ### Acknowledgement
-This work was doen with [Dr. Fan Zhou](https://fzhou.cc/)(@Beihang University) and [Prof. Christian Gagné](https://chgagne.github.io/english/)(@Université Laval).
+This work was finished with [Dr. Fan Zhou](https://fzhou.cc/)(@Beihang University) and [Prof. Christian Gagné](https://chgagne.github.io/english/)(@Université Laval).
